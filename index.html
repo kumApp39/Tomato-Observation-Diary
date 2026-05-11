@@ -159,7 +159,14 @@
   <div id="view-list" class="view hidden flex flex-col h-full w-full">
     <div class="bg-red-500 text-white pt-10 md:pt-14 pb-4 md:pb-6 px-4 md:px-8 flex justify-between items-center shadow-md shrink-0 z-10 relative">
       <button onclick="showView('home', 'back')" class="bg-red-600 px-4 md:px-6 py-3 md:py-4 rounded-2xl text-xl md:text-2xl font-bold active:bg-red-700 transition-colors">◀ もどる</button>
-      <h2 class="text-2xl md:text-4xl font-bold" onpointerdown="startSecretPress()" onpointerup="cancelSecretPress()" onpointerleave="cancelSecretPress()" style="touch-action: none;">これまでの きろく</h2>
+      <h2 class="text-2xl md:text-4xl font-bold cursor-pointer" 
+          ontouchstart="startSecretPress(event)" 
+          ontouchend="cancelSecretPress(event)" 
+          ontouchcancel="cancelSecretPress(event)" 
+          onmousedown="startSecretPress(event)" 
+          onmouseup="cancelSecretPress(event)" 
+          onmouseleave="cancelSecretPress(event)" 
+          style="touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;">これまでの きろく</h2>
       <div class="flex gap-4">
         <!-- 一括保存用ボタン -->
         <button id="batchPdfBtn" onclick="downloadPDF()" class="hidden btn-3d bg-blue-600 px-3 md:px-4 py-2 md:py-3 rounded-xl text-lg md:text-xl font-bold active:bg-blue-700 transition-colors border-2 border-white shadow-sm flex flex-col items-center">
@@ -763,7 +770,8 @@
     }
 
     // ★ 先生モード切替（タイトルを3秒間長押し）
-    function startSecretPress() {
+    function startSecretPress(e) {
+      cancelSecretPress(); // 重複を防ぐために一度クリア
       secretPressTimer = setTimeout(() => {
         isTeacherMode = !isTeacherMode;
         updateTeacherModeUI();
@@ -771,7 +779,7 @@
       }, 3000); // 3秒長押し
     }
 
-    function cancelSecretPress() {
+    function cancelSecretPress(e) {
       clearTimeout(secretPressTimer);
     }
 
