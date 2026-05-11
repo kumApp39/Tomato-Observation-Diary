@@ -34,6 +34,14 @@
     .calendar-cell {
       aspect-ratio: 1 / 1;
     }
+    /* スクロール時にピタッと止まる設定 */
+    .snap-container {
+      scroll-snap-type: y mandatory;
+    }
+    .snap-item {
+      scroll-snap-align: start;
+      scroll-margin-top: 1rem;
+    }
   </style>
 </head>
 <body class="h-screen w-screen flex flex-col items-center justify-center relative text-gray-800 bg-red-50">
@@ -59,10 +67,7 @@
     </div>
     
     <div class="flex flex-col md:flex-row gap-3 w-full max-w-5xl flex-1 min-h-0">
-      
-      <!-- 左側：称号とカレンダー -->
       <div class="flex flex-col gap-3 flex-1 min-h-0">
-        <!-- 称号エリア -->
         <div class="bg-yellow-50 rounded-2xl p-3 md:p-4 border-4 border-yellow-300 shadow-sm shrink-0 flex flex-col items-center relative overflow-hidden">
           <div class="absolute -top-4 -right-4 text-5xl opacity-20">✨</div>
           <div class="absolute -bottom-4 -left-4 text-5xl opacity-20">🌟</div>
@@ -82,7 +87,6 @@
           <div id="nextTitleHint" class="text-xs md:text-sm font-bold text-yellow-700 mt-1 z-10">つぎの しょうごう まで あと 3こ！</div>
         </div>
 
-        <!-- カレンダー -->
         <div class="bg-white rounded-2xl p-2 md:p-4 border-4 border-red-200 shadow-sm flex flex-col flex-1 min-h-0">
           <div class="flex justify-between items-center mb-1 md:mb-2 bg-red-50 rounded-xl p-1 md:p-2 shrink-0">
             <button onclick="changeMonth(-1)" class="btn-3d bg-white text-red-500 rounded-full w-10 h-10 md:w-12 md:h-12 text-lg md:text-xl font-bold flex items-center justify-center shadow">◀</button>
@@ -96,7 +100,6 @@
         </div>
       </div>
 
-      <!-- 右側：アクションボタン -->
       <div class="flex flex-col gap-4 w-full md:w-80 shrink-0 justify-center pb-2 md:pb-0">
         <button onclick="startCamera()" class="btn-3d bg-orange-400 text-white rounded-[2rem] p-6 md:p-8 text-2xl md:text-3xl font-bold flex flex-col items-center justify-center gap-3">
           <span class="text-6xl md:text-7xl">📷</span>
@@ -155,24 +158,25 @@
 
   <!-- 3. これまでの きろく をみる がめん（リスト） -->
   <div id="view-list" class="view hidden flex flex-col h-full w-full">
-    <div class="bg-red-500 text-white p-4 md:p-6 flex justify-between items-center shadow-md shrink-0">
+    <div class="bg-red-500 text-white p-4 md:p-6 flex justify-between items-center shadow-md shrink-0 z-10 relative">
       <button onclick="showView('home', 'back')" class="bg-red-600 px-4 md:px-6 py-3 md:py-4 rounded-2xl text-xl md:text-2xl font-bold active:bg-red-700 transition-colors">◀ もどる</button>
       <h2 class="text-2xl md:text-4xl font-bold">これまでの きろく</h2>
       <div class="flex gap-4">
-        <button onclick="downloadPDF()" class="bg-blue-600 px-3 md:px-4 py-2 md:py-3 rounded-xl text-lg md:text-xl font-bold active:bg-blue-700 transition-colors border-2 border-white shadow-sm flex flex-col items-center">
-          <span>🖨️ PDF ほぞん</span>
+        <!-- 一括保存用ボタン -->
+        <button onclick="downloadPDF()" class="btn-3d bg-blue-600 px-3 md:px-4 py-2 md:py-3 rounded-xl text-lg md:text-xl font-bold active:bg-blue-700 transition-colors border-2 border-white shadow-sm flex flex-col items-center">
+          <span>🖨️ ぜんぶ PDF ほぞん</span>
           <span class="text-xs md:text-sm">(せんせい用)</span>
         </button>
       </div>
     </div>
-    <!-- 記録リスト部分はスクロール可能 -->
-    <div id="recordList" class="scrollable flex-1 p-4 md:p-6 flex flex-col gap-6 md:gap-8 pb-32 bg-gray-50">
+    <!-- 記録リスト部分：スナップスクロール＆画面内フィット -->
+    <div id="recordList" class="scrollable snap-container flex-1 p-4 md:p-6 flex flex-col gap-6 md:gap-8 pb-32 bg-gray-100">
       <!-- JavaScriptでここに記録が追加されます -->
     </div>
   </div>
 
   <!-- モーダル類 -->
-  <div id="modal-success" class="hidden absolute inset-0 bg-black bg-opacity-40 z-40 flex items-center justify-center p-4">
+  <div id="modal-success" class="hidden absolute inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
   </div>
   <div id="modal-error" class="hidden absolute inset-0 bg-white z-50 flex flex-col items-center justify-center p-8 text-center">
     <div id="errorIcon" class="text-7xl md:text-8xl mb-6">⚠️</div>
@@ -659,7 +663,15 @@
       }
     }
 
-    // ★ 観察日誌リストを「横並びのコンパクトなレイアウト」に変更し、1画面に収まりやすくする
+    // 日付を YYYYMMDD 形式にする関数（ファイル名用）
+    function getFormatDate(dateObj) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      return `${y}${m}${d}`;
+    }
+
+    // ★ 観察日誌リストを「写真が一番目立つ全画面レイアウト」に変更
     function renderList() {
       const listContainer = document.getElementById('recordList');
       listContainer.innerHTML = '';
@@ -681,15 +693,23 @@
 
       records.forEach((record) => {
         const item = document.createElement('div');
-        // 縦長(aspect-[1/1.414])をやめ、横並び(flex-row)でコンパクトなカード型にする
-        item.className = 'bg-white p-4 md:p-6 shadow-xl flex flex-col md:flex-row border-4 border-red-200 rounded-3xl w-full max-w-5xl mx-auto mb-6 gap-4 md:gap-6';
+        // 横画面で1つの記録がほぼ画面いっぱいに広がるレイアウト
+        item.className = 'snap-item bg-white p-4 md:p-6 shadow-2xl flex flex-col md:flex-row border-4 border-red-300 rounded-[2rem] w-full max-w-6xl mx-auto h-auto md:h-[75vh] shrink-0 gap-4 md:gap-6';
         
-        // 左側（日付、バッジ、写真）
+        // 左側：写真を超大きく表示
         const leftCol = document.createElement('div');
-        leftCol.className = 'flex flex-col items-center w-full md:w-1/2 h-full gap-3 md:gap-4 shrink-0';
+        leftCol.className = 'w-full md:w-3/5 h-64 md:h-full flex items-center justify-center bg-gray-100 border-4 border-gray-300 rounded-2xl overflow-hidden shrink-0 shadow-inner relative';
+        const img = document.createElement('img');
+        img.src = record.image;
+        img.className = 'max-w-full max-h-full object-contain';
+        leftCol.appendChild(img);
+
+        // 右側：情報（日付、バッジ、個別保存ボタン）＋きづいたこと
+        const rightCol = document.createElement('div');
+        rightCol.className = 'w-full md:w-2/5 flex flex-col h-full gap-4 shrink-0';
         
         const dateDiv = document.createElement('div');
-        dateDiv.className = `w-full text-center pb-2 border-b-4 border-red-500`;
+        dateDiv.className = 'w-full text-center pb-4 border-b-4 border-red-500 flex flex-col items-center';
         
         const iconToShow = '🍅';
         const recordName = record.userName || currentUserName;
@@ -700,25 +720,19 @@
         
         dateDiv.innerHTML = `
           <div class="text-lg md:text-xl text-gray-500 font-bold mb-1">${recordName}さんの</div>
-          <div class="text-2xl md:text-3xl font-bold text-gray-800 flex justify-center items-center gap-2"><span>${iconToShow}</span> ${record.dateText} の きろく</div>
+          <div class="text-3xl md:text-4xl font-bold text-gray-800 flex justify-center items-center gap-2"><span>${iconToShow}</span> ${record.dateText}</div>
           <div>${waterBadge}</div>
         `;
-        
-        const imgContainer = document.createElement('div');
-        // 画像の高さを抑えて全体が画面に入るように調整
-        imgContainer.className = 'w-full flex-1 flex items-center justify-center bg-gray-50 border-4 border-gray-200 rounded-xl overflow-hidden min-h-[200px] h-48 md:h-auto';
-        const img = document.createElement('img');
-        img.src = record.image;
-        img.className = 'max-w-full max-h-full object-contain';
-        imgContainer.appendChild(img);
-        
-        leftCol.appendChild(dateDiv);
-        leftCol.appendChild(imgContainer);
 
-        // 右側（きづいたこと）
-        const rightCol = document.createElement('div');
-        rightCol.className = 'w-full md:w-1/2 flex flex-col h-auto min-h-[200px] md:min-h-[300px] border-4 border-blue-200 rounded-2xl p-4 md:p-6 bg-blue-50 shadow-inner';
+        // 個別PDF保存ボタンを配置
+        const pdfBtn = document.createElement('button');
+        pdfBtn.className = 'btn-3d bg-green-500 hover:bg-green-600 text-white px-5 py-3 rounded-2xl text-lg font-bold flex items-center gap-2 mt-4 transition-colors shadow';
+        pdfBtn.innerHTML = '🖨️ このきろくを PDF ほぞん';
+        pdfBtn.onclick = () => downloadPDF(record.id);
+        dateDiv.appendChild(pdfBtn);
         
+        const noticeContainer = document.createElement('div');
+        noticeContainer.className = 'w-full flex-1 flex flex-col border-4 border-blue-200 rounded-2xl p-4 md:p-6 bg-blue-50 shadow-inner min-h-0';
         const noticeLabel = document.createElement('div');
         noticeLabel.className = 'text-xl md:text-2xl font-bold text-blue-700 mb-2 md:mb-3 border-b-2 border-blue-200 pb-2';
         noticeLabel.innerHTML = '✏️ きづいたこと';
@@ -727,8 +741,11 @@
         noticeText.className = 'text-xl md:text-3xl text-gray-800 flex-1 overflow-y-auto whitespace-pre-wrap leading-relaxed';
         noticeText.textContent = record.notice || '（かいてないよ）';
         
-        rightCol.appendChild(noticeLabel);
-        rightCol.appendChild(noticeText);
+        noticeContainer.appendChild(noticeLabel);
+        noticeContainer.appendChild(noticeText);
+
+        rightCol.appendChild(dateDiv);
+        rightCol.appendChild(noticeContainer);
 
         item.appendChild(leftCol);
         item.appendChild(rightCol);
@@ -764,12 +781,24 @@
       location.reload(); 
     }
 
-    function downloadPDF() {
+    // ★ PDF保存（個別・一括対応、ファイル名に日付入り）
+    function downloadPDF(recordId = null) {
       playSound('click');
-      const records = JSON.parse(localStorage.getItem('yasai_records')) || [];
+      let records = JSON.parse(localStorage.getItem('yasai_records')) || [];
       if (records.length === 0) {
         showError('きろくが まだ ないよ', false);
         return;
+      }
+
+      // ターゲットの絞り込みとファイル名設定
+      let targetRecords = records;
+      let filename = '';
+      if (recordId !== null) {
+        targetRecords = records.filter(r => r.id === recordId);
+        const recordDate = new Date(recordId);
+        filename = `トマトのきろく_${getFormatDate(recordDate)}.pdf`;
+      } else {
+        filename = `トマトのきろく_ぜんぶ_${getFormatDate(new Date())}.pdf`;
       }
 
       document.getElementById('modal-error').classList.remove('hidden');
@@ -784,7 +813,7 @@
       pdfContainer.style.backgroundColor = 'white';
       pdfContainer.style.color = '#1f2937';
 
-      const sortedRecords = [...records].sort((a, b) => a.id - b.id);
+      const sortedRecords = [...targetRecords].sort((a, b) => a.id - b.id);
 
       sortedRecords.forEach((record, index) => {
         const page = document.createElement('div');
@@ -832,7 +861,7 @@
 
       const opt = {
         margin:       0,
-        filename:     'トマトのきろく.pdf',
+        filename:     filename, // ★自動生成されたファイル名を適用
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true },
         jsPDF:        { unit: 'px', format: [794, 1123], orientation: 'portrait' }
