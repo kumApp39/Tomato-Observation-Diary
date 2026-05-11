@@ -34,7 +34,6 @@
     .calendar-cell {
       aspect-ratio: 1 / 1;
     }
-    /* スクロール時にピタッと止まる設定 */
     .snap-container {
       scroll-snap-type: y mandatory;
     }
@@ -169,8 +168,8 @@
         </button>
       </div>
     </div>
-    <!-- 記録リスト部分：スナップスクロール＆画面内フィット -->
-    <div id="recordList" class="scrollable snap-container flex-1 p-4 md:p-6 flex flex-col gap-6 md:gap-8 pb-32 bg-gray-100">
+    <!-- 記録リスト部分：スナップスクロール -->
+    <div id="recordList" class="scrollable snap-container flex-1 p-4 md:p-6 flex flex-col gap-8 pb-32 bg-gray-100">
       <!-- JavaScriptでここに記録が追加されます -->
     </div>
   </div>
@@ -671,7 +670,7 @@
       return `${y}${m}${d}`;
     }
 
-    // ★ 観察日誌リストを「写真が一番目立つ全画面レイアウト」に変更
+    // ★ 観察日誌リスト。中身に合わせて高さが自動で伸びる（h-auto）ように修正。
     function renderList() {
       const listContainer = document.getElementById('recordList');
       listContainer.innerHTML = '';
@@ -693,12 +692,13 @@
 
       records.forEach((record) => {
         const item = document.createElement('div');
-        // 横画面で1つの記録がほぼ画面いっぱいに広がるレイアウト
-        item.className = 'snap-item bg-white p-4 md:p-6 shadow-2xl flex flex-col md:flex-row border-4 border-red-300 rounded-[2rem] w-full max-w-6xl mx-auto h-auto md:h-[75vh] shrink-0 gap-4 md:gap-6';
+        // ★ h-auto を指定し、中身が大きくなれば親の赤枠も伸びるようにする
+        item.className = 'snap-item bg-white p-4 md:p-6 shadow-2xl flex flex-col lg:flex-row border-4 border-red-300 rounded-[2rem] w-full max-w-6xl mx-auto h-auto min-h-[70vh] shrink-0 gap-4 md:gap-6';
         
         // 左側：写真を超大きく表示
         const leftCol = document.createElement('div');
-        leftCol.className = 'w-full md:w-3/5 h-64 md:h-full flex items-center justify-center bg-gray-100 border-4 border-gray-300 rounded-2xl overflow-hidden shrink-0 shadow-inner relative';
+        // 縦画面（lg未満）の時は写真の高さを十分に取り、横画面（lg以上）なら高さ自動調整
+        leftCol.className = 'w-full lg:w-3/5 h-72 sm:h-96 lg:h-auto lg:min-h-[60vh] flex items-center justify-center bg-gray-100 border-4 border-gray-300 rounded-2xl overflow-hidden shrink-0 shadow-inner relative';
         const img = document.createElement('img');
         img.src = record.image;
         img.className = 'max-w-full max-h-full object-contain';
@@ -706,10 +706,10 @@
 
         // 右側：情報（日付、バッジ、個別保存ボタン）＋きづいたこと
         const rightCol = document.createElement('div');
-        rightCol.className = 'w-full md:w-2/5 flex flex-col h-full gap-4 shrink-0';
+        rightCol.className = 'w-full lg:w-2/5 flex flex-col flex-1 gap-4 shrink-0';
         
         const dateDiv = document.createElement('div');
-        dateDiv.className = 'w-full text-center pb-4 border-b-4 border-red-500 flex flex-col items-center';
+        dateDiv.className = 'w-full text-center pb-4 border-b-4 border-red-500 flex flex-col items-center shrink-0';
         
         const iconToShow = '🍅';
         const recordName = record.userName || currentUserName;
@@ -724,7 +724,7 @@
           <div>${waterBadge}</div>
         `;
 
-        // 個別PDF保存ボタンを配置
+        // 個別PDF保存ボタン
         const pdfBtn = document.createElement('button');
         pdfBtn.className = 'btn-3d bg-green-500 hover:bg-green-600 text-white px-5 py-3 rounded-2xl text-lg font-bold flex items-center gap-2 mt-4 transition-colors shadow';
         pdfBtn.innerHTML = '🖨️ このきろくを PDF ほぞん';
@@ -732,9 +732,10 @@
         dateDiv.appendChild(pdfBtn);
         
         const noticeContainer = document.createElement('div');
-        noticeContainer.className = 'w-full flex-1 flex flex-col border-4 border-blue-200 rounded-2xl p-4 md:p-6 bg-blue-50 shadow-inner min-h-0';
+        // flex-1 で残りのスペースを埋めつつ、最低限の高さを確保
+        noticeContainer.className = 'w-full flex-1 flex flex-col border-4 border-blue-200 rounded-2xl p-4 md:p-6 bg-blue-50 shadow-inner min-h-[150px] md:min-h-[250px]';
         const noticeLabel = document.createElement('div');
-        noticeLabel.className = 'text-xl md:text-2xl font-bold text-blue-700 mb-2 md:mb-3 border-b-2 border-blue-200 pb-2';
+        noticeLabel.className = 'text-xl md:text-2xl font-bold text-blue-700 mb-2 md:mb-3 border-b-2 border-blue-200 pb-2 shrink-0';
         noticeLabel.innerHTML = '✏️ きづいたこと';
         
         const noticeText = document.createElement('div');
@@ -790,7 +791,6 @@
         return;
       }
 
-      // ターゲットの絞り込みとファイル名設定
       let targetRecords = records;
       let filename = '';
       if (recordId !== null) {
@@ -861,7 +861,7 @@
 
       const opt = {
         margin:       0,
-        filename:     filename, // ★自動生成されたファイル名を適用
+        filename:     filename, 
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true },
         jsPDF:        { unit: 'px', format: [794, 1123], orientation: 'portrait' }
