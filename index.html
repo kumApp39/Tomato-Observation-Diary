@@ -159,10 +159,10 @@
   <div id="view-list" class="view hidden flex flex-col h-full w-full">
     <div class="bg-red-500 text-white p-4 md:p-6 flex justify-between items-center shadow-md shrink-0 z-10 relative">
       <button onclick="showView('home', 'back')" class="bg-red-600 px-4 md:px-6 py-3 md:py-4 rounded-2xl text-xl md:text-2xl font-bold active:bg-red-700 transition-colors">◀ もどる</button>
-      <h2 class="text-2xl md:text-4xl font-bold">これまでの きろく</h2>
+      <h2 class="text-2xl md:text-4xl font-bold" onclick="handleSecretTap()">これまでの きろく</h2>
       <div class="flex gap-4">
         <!-- 一括保存用ボタン -->
-        <button onclick="downloadPDF()" class="btn-3d bg-blue-600 px-3 md:px-4 py-2 md:py-3 rounded-xl text-lg md:text-xl font-bold active:bg-blue-700 transition-colors border-2 border-white shadow-sm flex flex-col items-center">
+        <button id="batchPdfBtn" onclick="downloadPDF()" class="hidden btn-3d bg-blue-600 px-3 md:px-4 py-2 md:py-3 rounded-xl text-lg md:text-xl font-bold active:bg-blue-700 transition-colors border-2 border-white shadow-sm flex flex-col items-center">
           <span>🖨️ ぜんぶ PDF ほぞん</span>
           <span class="text-xs md:text-sm">(せんせい用)</span>
         </button>
@@ -235,6 +235,11 @@
     let videoStream = null;
     let currentCalendarDate = new Date();
     let isPreviewWatered = false;
+
+    // ★ 先生モード用変数
+    let secretTapCount = 0;
+    let secretTapTimer = null;
+    let isTeacherMode = false;
 
     function unlockAudio() {
       if (!audioCtx) {
@@ -724,9 +729,9 @@
           <div>${waterBadge}</div>
         `;
 
-        // 個別PDF保存ボタン
+        // 個別PDF保存ボタン (先生モードの時だけ表示)
         const pdfBtn = document.createElement('button');
-        pdfBtn.className = 'btn-3d bg-green-500 hover:bg-green-600 text-white px-5 py-3 rounded-2xl text-lg font-bold flex items-center gap-2 mt-4 transition-colors shadow';
+        pdfBtn.className = 'teacher-pdf-btn hidden btn-3d bg-green-500 hover:bg-green-600 text-white px-5 py-3 rounded-2xl text-lg font-bold flex items-center gap-2 mt-4 transition-colors shadow';
         pdfBtn.innerHTML = '🖨️ このきろくを PDF ほぞん';
         pdfBtn.onclick = () => downloadPDF(record.id);
         dateDiv.appendChild(pdfBtn);
@@ -753,6 +758,39 @@
 
         listContainer.appendChild(item);
       });
+
+      // 先生モードの状態を反映
+      updateTeacherModeUI();
+    }
+
+    // ★ 先生モード切替（タイトルを5回連続タップ）
+    function handleSecretTap() {
+      secretTapCount++;
+      clearTimeout(secretTapTimer);
+      
+      if (secretTapCount >= 5) {
+        isTeacherMode = !isTeacherMode;
+        secretTapCount = 0;
+        updateTeacherModeUI();
+        playSound('success'); // 切り替わった合図
+      } else {
+        secretTapTimer = setTimeout(() => {
+          secretTapCount = 0;
+        }, 1000); // 1秒間操作がないとリセット
+      }
+    }
+
+    function updateTeacherModeUI() {
+      const batchBtn = document.getElementById('batchPdfBtn');
+      const individualBtns = document.querySelectorAll('.teacher-pdf-btn');
+      
+      if (isTeacherMode) {
+        batchBtn.classList.remove('hidden');
+        individualBtns.forEach(btn => btn.classList.remove('hidden'));
+      } else {
+        batchBtn.classList.add('hidden');
+        individualBtns.forEach(btn => btn.classList.add('hidden'));
+      }
     }
 
     function showError(msg, canClear = false) {
